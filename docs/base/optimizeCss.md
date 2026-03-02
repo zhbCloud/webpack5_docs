@@ -121,6 +121,28 @@ npm run build
 npm i postcss-loader postcss postcss-preset-env -D
 ```
 
+这三个工具在 Webpack 构建流程中共同协作，负责处理 CSS 的兼容性和现代特性。它们之间的关系可以用“核心引擎”、“连接器”和“插件集”来类比。
+
+下面是详细的分析：
+
+**1. 核心作用与定位**
+
+| 工具名称                 | 作用定位           | 详细说明                                                     |
+| :----------------------- | :----------------- | :----------------------------------------------------------- |
+| **`postcss`**            | **核心转换引擎**   | 这是一个用 JavaScript 转换 CSS 的工具。它本身不做任何具体的样式处理，而是提供了一个极其强大的 API，允许通过各种插件来分析和修改 CSS（类似 Babel 处理 JS 的机制）。 |
+| **`postcss-loader`**     | **Webpack 连接器** | 它是 Webpack 的一个 Loader。作用是让 Webpack 能够调用 PostCSS。当 Webpack 遇到 CSS 文件时，`postcss-loader` 会把 CSS 交给 `postcss` 引擎去处理。 |
+| **`postcss-preset-env`** | **功能插件集**     | 这是一个 PostCSS 插件。它能让你使用最新的 CSS 语法（如 变量、嵌套等），并自动根据你指定的浏览器目标（Browserslist）添加对应的 Vendor Prefix（前缀）或降级处理。它集成了 `autoprefixer` 等多个常用插件。 |
+
+------
+
+**2. 三者之间的依赖关系**
+
+它们的关系是**层层递进**的：
+
+1. **`postcss-loader`** 依赖 **`postcss`**：Loader 只是一个外壳，没有核心引擎它无法工作。
+2. **`postcss`** 需要 **`postcss-preset-env`**：核心引擎只是一个平台，如果没有插件，它进出 CSS 的结果是一模一样的。
+3. **Webpack 流程**： `Webpack` ➔ `postcss-loader` ➔ `postcss` ➔ `postcss-preset-env` (各种具体转换逻辑)
+
 ### 2. 配置
 
 - webpack.prod.js
@@ -284,12 +306,18 @@ module.exports = {
 
 以上为了测试兼容性所以设置兼容浏览器 ie8 以上。
 
+![image-20260228132335215](https://picgo-2024.oss-cn-beijing.aliyuncs.com/img/image-20260228132335215.png)
+
 实际开发中我们一般不考虑旧版本浏览器了，所以我们可以这样设置：
 
 ```json
 {
   // 其他省略
-  "browserslist": ["last 2 version", "> 1%", "not dead"]
+  "browserslist": [
+      "last 2 version", // 每个主流浏览器（Chrome, Firefox, Safari, Edge 等）的最后两个版本。
+      "> 1%", // 全球使用份额超过 1% 的浏览器。
+      "not dead" // 排除**“已死亡”**的浏览器。
+  ]
 }
 ```
 

@@ -4,13 +4,13 @@ module.exports = {
   // 站点配置
   base: "/", // Netlify 部署使用根路径
   lang: "zh-CN",
-  head: [["link", { rel: "icon", href: "/imgs/favicon.ico" }]],
-  title: "尚硅谷 Web 前端之 Webpack5 教程",
+  head: [["link", { rel: "icon", href: "" }]],
+  title: "Web 前端之 Webpack5 教程",
   description: "Webpack5从小白到大神",
   // 主题和它的配置
   theme: "@vuepress/theme-default",
   themeConfig: {
-    logo: "/imgs/favicon.ico",
+    logo: "",
     lastUpdated: false,
     navbar: [
       {
@@ -56,6 +56,7 @@ module.exports = {
             "/base/font.md",
             "/base/other.md",
             "/base/javascript.md",
+            "/base/loader-use.md",
             "/base/html.md",
             "/base/server.md",
             "/base/production.md",

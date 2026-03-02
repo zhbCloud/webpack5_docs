@@ -15,6 +15,12 @@ Webpack 本身功能是有限的:
 - 开发模式：仅能编译 JS 中的 `ES Module` 语法
 - 生产模式：能编译 JS 中的 `ES Module` 语法，还能压缩 JS 代码
 
+默认情况下webpack：
+
+- 它能做什么： 当 Webpack 遇到你的 JS 文件里写了 import xxx from './xxx' 或是 export default xxx（甚至是 CommonJS 的 require）时，它能看懂！它知道这些文件之间有依赖关系，然后把它们“拼合（打包）”成一个或多个浏览器能直接运行的 JS 压缩包。
+
+- 它不能做什么： 除此之外的其他所有现代 JS 高级语法（比如 箭头函数、解构赋值、Class 类、Promise、async/await 等），Webpack 原生是完全不管的。你写的是箭头函数，它打包出来依然是箭头函数。
+
 ## 开始使用
 
 ### 1. 资源目录

@@ -18,7 +18,7 @@ webpack 本身只能处理 js、json 等资源，其他资源需要借助 loader
 
 4. plugins（插件）
 
-扩展 Webpack 的功能
+loader 用于转换某些类型的模块，而插件则可以用于执行范围更广的任务。包括：打包优化，资源管理，注入环境变量。
 
 5. mode（模式）
 
@@ -64,11 +64,11 @@ module.exports = {
   entry: "./src/main.js",
   // 输出
   output: {
-    // path: 文件输出目录，必须是绝对路径
+    // path: 所有文件输出目录，必须是绝对路径
     // path.resolve()方法返回一个绝对路径
     // __dirname 当前文件的文件夹绝对路径
     path: path.resolve(__dirname, "dist"),
-    // filename: 输出文件名
+    // filename: 入口文件打包输出文件名
     filename: "main.js",
   },
   // 加载器

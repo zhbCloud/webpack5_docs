@@ -10,7 +10,7 @@ npm i html-webpack-plugin -D
 
 - webpack.config.js
 
-```js{3,68-72}
+```js{3,69-77}
 const path = require("path");
 const ESLintWebpackPlugin = require("eslint-webpack-plugin");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
@@ -78,11 +78,16 @@ module.exports = {
       // 指定检查文件的根目录
       context: path.resolve(__dirname, "src"),
     }),
-    new HtmlWebpackPlugin({
-      // 以 public/index.html 为模板创建文件
-      // 新的html文件有两个特点：1. 内容和源文件一致 2. 自动引入打包生成的js等资源
-      template: path.resolve(__dirname, "public/index.html"),
-    }),
+	
+	// 一般这么配置即可
+	new HtmlWebpackPlugin()
+	
+	
+    // new HtmlWebpackPlugin({
+    //   // 以 public/index.html 为模板创建文件
+    //   // 新的html文件有两个特点：1. 内容和源文件一致 2. 自动引入打包生成的js等资源
+    //   template: path.resolve(__dirname, "public/index.html"),
+    // }),
   ],
   mode: "development",
 };

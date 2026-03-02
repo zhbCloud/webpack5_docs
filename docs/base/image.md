@@ -4,6 +4,60 @@
 
 现在 Webpack5 已经将两个 Loader 功能内置到 Webpack 里了，我们只需要简单配置即可处理图片资源
 
+在 webpack 5 之前，通常使用：
+
+- [`raw-loader`](https://v4.webpack.js.org/loaders/raw-loader/) 将文件导入为字符串
+- [`url-loader`](https://v4.webpack.js.org/loaders/url-loader/) 将文件作为 data URI 内联到 bundle 中
+- [`file-loader`](https://v4.webpack.js.org/loaders/file-loader/) 将文件发送到输出目录
+
+资源模块类型(asset module type)，通过添加 4 种新的模块类型，来替换所有这些 loader：
+
+- `asset/resource` 
+
+  - 作用：将资源文件原封不动地打包输出到一个单独的文件中，并导出该文件的 URL 路径。
+  - 替代：Webpack 4 中的 `file-loader`。
+  - 适用场景：较大的图片文件、字体文件（woff2, eot 等）、音视频文件等。
+
+- `asset/inline` 
+
+  - 作用：将资源文件转换为 Data URI（通常是 Base64 编码的字符串），并直接内嵌到打包后的 JS（或 CSS）文件中，不会生成独立的资源文件。
+
+  - 替代：Webpack 4 中的` url-loader`（且不配置 limit 限制大小的情况）。
+
+  - 适用场景：极小的图标（如 1kb、2kb 的小 png）。好处是可以减少网页加载时的 HTTP 请求数量；坏处是如果把大图片转成 Base64，会让你的 JS 文件体积急剧增大。
+
+- `asset/source` 
+
+  - 作用：导出资源的源代码（把文件内容作为字符串原样导出）。
+
+  - 替代：Webpack 4 中的 `raw-loader`。
+
+  - 适用场景：需要读取文本内容时，比如导入 .txt 文本文件、.md Markdown 文件，或者你想把 SVG 图标直接当成 HTML 字符串插入到页面中时。
+
+- `asset` (最常用)
+
+  - 作用：这是一个智能类型。它会在 asset/resource（输出文件）和 asset/inline（转 Base64 内嵌）之间自动做出选择。
+
+  - 替代：Webpack 4 中配置了文件体积限制（limit）的 `url-loader`。
+
+  - 适用场景：常规的图片处理。
+
+  - 默认规则：如果文件大小小于 8kb，Webpack 会自动将其当作 asset/inline 处理（转 Base64）；如果文件大小大于 8kb，则将其当作 asset/resource 处理（输出为单独文件）。你可以通过配置 
+
+    ```js
+    {
+        test: /\.(png|jpe?g|gif|webp)$/,
+        type: "asset",
+        parser: {
+            dataUrlCondition: {
+            	maxSize: 10 * 1024 // 小于10kb的图片会被base64处理
+            }
+        }
+    },
+    ```
+
+    
+
 ## 1. 配置
 
 ```js{29-32}

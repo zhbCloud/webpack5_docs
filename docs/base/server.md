@@ -86,7 +86,7 @@ module.exports = {
       template: path.resolve(__dirname, "public/index.html"),
     }),
   ],
-  // 开发服务器
+  // 开发服务器:不会输出资源，在内存中编译打包的
   devServer: {
     host: "localhost", // 启动服务器域名
     port: "3000", // 启动服务器端口号
