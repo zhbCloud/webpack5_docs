@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+
+# VuePress temp and cache files
+docs/.vuepress/.temp/
+docs/.vuepress/.cache/
+docs/.vuepress/dist/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor directories and files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Environment files
+.env.local
+.env.*.local
+
+
+# VuePress 2 可能生成的其他临时文件 (防范性配置)
+docs/.vuepress/.server/
+# macOS / Windows 额外系统文件
+.AppleDouble
+.LSOverride
+Icon\r
+._*
+Desktop.ini
+ehthumbs.db
+# VS Code 本地历史记录插件缓存
+.history/
+# 其他包管理器的意外日志 (防止如果不小心使用了 yarn 或 pnpm)
+yarn-error.log
+yarn-debug.log*
+pnpm-debug.log*
