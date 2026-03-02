@@ -440,7 +440,7 @@ module.exports = {
 
 我们可以开启多进程同时处理 js 文件，这样速度就比之前的单进程打包更快了。
 
-**<font color='cornflowerblue'>ESLint、Babel、Terser 三者对比</font>**
+**<span style="color: cornflowerblue;">ESLint、Babel、Terser 三者对比</span>**
 
 这三个工具分别负责 JavaScript 工程化的**三个不同阶段**：
 

@@ -4,13 +4,12 @@ module.exports = {
   // 站点配置
   base: "/", // Netlify 部署使用根路径
   lang: "zh-CN",
-  head: [["link", { rel: "icon", href: "" }]],
+  head: [],
   title: "Web 前端之 Webpack5 教程",
   description: "Webpack5从小白到大神",
   // 主题和它的配置
   theme: "@vuepress/theme-default",
   themeConfig: {
-    logo: "",
     lastUpdated: false,
     navbar: [
       {
