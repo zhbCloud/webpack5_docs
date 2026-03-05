@@ -46,7 +46,7 @@
 
     ```js
     {
-        test: /\.(png|jpe?g|gif|webp)$/,
+        test: /\.(png|jpe?g|gif|webp|svg)$/,
         type: "asset",
         parser: {
             dataUrlCondition: {
@@ -90,7 +90,7 @@ module.exports = {
         use: ["style-loader", "css-loader", "stylus-loader"],
       },
       {
-        test: /\.(png|jpe?g|gif|webp)$/,
+        test: /\.(png|jpe?g|gif|webp|svg)$/,
         type: "asset",
       },
     ],

@@ -47,7 +47,19 @@ class B {}
 
 ### 是什么
 
-`@babel/plugin-transform-runtime`: 禁用了 Babel 自动对每个文件的 runtime 注入，而是引入 `@babel/plugin-transform-runtime` 并且使所有辅助代码从这里引用。
+`@babel/plugin-transform-runtime`
+
+- **定位**：编译时的工具（安装在 `devDependencies`）。
+- **职责 1**：提取runtime库中 Babel 辅助函数，防止重复注入，减小打包体积（我们这次使用的功能）
+- **职责 2**：配合 `corejs` 配置，提供沙箱式的环境，防止 Polyfill 污染全局作用域（Global Scope）。
+
+`@babel/runtime`
+
+- **定位**：运行时的代码库（必须安装在 `dependencies`）。
+- **内容**：只包含 helpers 函数实现（如 `_classCallCheck`）和 `regenerator-runtime`（用于 async/await）。
+- **限制**：**不包含**像 `Promise`、`Array.prototype.includes` 等现代 API 的 Polyfill垫片。
+
+两者必须结合使用：`@babel/plugin-transform-runtime`在编译时工作，自动将代码中内联的 Babel 辅助函数替换为从 `runtime` 库中统一引入，`@babel/runtime`提供 Babel 辅助函数（helpers）的实际运行的时代码
 
 ```js
 // 【转换后】使用 plugin-transform-runtime 后，统一从模块按需引入
@@ -68,163 +80,26 @@ class B {}
 
 ```
 npm i @babel/plugin-transform-runtime -D
+npm i @babel/runtime -S
 ```
 
 2. 配置
 
-```js{100}
-const os = require("os");
-const path = require("path");
-const ESLintWebpackPlugin = require("eslint-webpack-plugin");
-const HtmlWebpackPlugin = require("html-webpack-plugin");
-const MiniCssExtractPlugin = require("mini-css-extract-plugin");
-const CssMinimizerPlugin = require("css-minimizer-webpack-plugin");
-const TerserPlugin = require("terser-webpack-plugin");
-
-// cpu核数
-const threads = os.cpus().length;
-
-// 获取处理样式的Loaders
-const getStyleLoaders = (preProcessor) => {
-  return [
-    MiniCssExtractPlugin.loader,
-    "css-loader",
-    {
-      loader: "postcss-loader",
-      options: {
-        postcssOptions: {
-          plugins: [
-            "postcss-preset-env", // 能解决大多数样式兼容性问题
-          ],
-        },
-      },
-    },
-    preProcessor,
-  ].filter(Boolean);
-};
-
-module.exports = {
-  entry: "./src/main.js",
-  output: {
-    path: path.resolve(__dirname, "../dist"), // 生产模式需要输出
-    filename: "static/js/main.js", // 将 js 文件输出到 static/js 目录中
-    clean: true,
-  },
-  module: {
-    rules: [
+```json{5-12}
+{
+  "presets": [
+    "@babel/preset-env"
+  ],
+  "plugins": [
+    [
+      "@babel/plugin-transform-runtime",
       {
-        oneOf: [
-          {
-            // 用来匹配 .css 结尾的文件
-            test: /\.css$/,
-            // use 数组里面 Loader 执行顺序是从右到左
-            use: getStyleLoaders(),
-          },
-          {
-            test: /\.less$/,
-            use: getStyleLoaders("less-loader"),
-          },
-          {
-            test: /\.s[ac]ss$/,
-            use: getStyleLoaders("sass-loader"),
-          },
-          {
-            test: /\.styl$/,
-            use: getStyleLoaders("stylus-loader"),
-          },
-          {
-            test: /\.(png|jpe?g|gif|webp)$/,
-            type: "asset",
-            parser: {
-              dataUrlCondition: {
-                maxSize: 10 * 1024, // 小于10kb的图片会被base64处理
-              },
-            },
-            generator: {
-              // 将图片文件输出到 static/imgs 目录中
-              // 将图片文件命名 [hash:8][ext][query]
-              // [hash:8]: hash值取8位
-              // [ext]: 使用之前的文件扩展名
-              // [query]: 添加之前的query参数
-              filename: "static/imgs/[hash:8][ext][query]",
-            },
-          },
-          {
-            test: /\.(ttf|woff2?)$/,
-            type: "asset/resource",
-            generator: {
-              filename: "static/media/[hash:8][ext][query]",
-            },
-          },
-          {
-            test: /\.js$/,
-            // exclude: /node_modules/, // 排除node_modules代码不编译
-            include: path.resolve(__dirname, "../src"), // 也可以用包含
-            use: [
-              {
-                loader: "thread-loader", // 开启多进程
-                options: {
-                  workers: threads, // 数量
-                },
-              },
-              {
-                loader: "babel-loader",
-                options: {
-                  cacheDirectory: true, // 开启babel编译缓存
-                  cacheCompression: false, // 缓存文件不要压缩
-                  plugins: ["@babel/plugin-transform-runtime"], // 减少代码体积
-                },
-              },
-            ],
-          },
-        ],
-      },
-    ],
-  },
-  plugins: [
-    new ESLintWebpackPlugin({
-      // 指定检查文件的根目录
-      context: path.resolve(__dirname, "../src"),
-      exclude: "node_modules", // 默认值
-      cache: true, // 开启缓存
-      // 缓存目录
-      cacheLocation: path.resolve(
-        __dirname,
-        "../node_modules/.cache/.eslintcache"
-      ),
-      threads, // 开启多进程
-    }),
-    new HtmlWebpackPlugin({
-      // 以 public/index.html 为模板创建文件
-      // 新的html文件有两个特点：1. 内容和源文件一致 2. 自动引入打包生成的js等资源
-      template: path.resolve(__dirname, "../public/index.html"),
-    }),
-    // 提取css成单独文件
-    new MiniCssExtractPlugin({
-      // 定义输出文件名和目录
-      filename: "static/css/main.css",
-    }),
-    // css压缩
-    // new CssMinimizerPlugin(),
-  ],
-  optimization: {
-    minimizer: [
-      // css压缩也可以写到optimization.minimizer里面，效果一样的
-      new CssMinimizerPlugin(),
-      // 当生产模式会默认开启TerserPlugin，但是我们需要进行其他配置，就要重新写了
-      new TerserPlugin({
-        parallel: threads, // 开启多进程
-      }),
+        "corejs": false // 告诉该插件：不要去处理 API Polyfill 的事情。
+      }
     ]
-  ],
-  // devServer: {
-  //   host: "localhost", // 启动服务器域名
-  //   port: "3000", // 启动服务器端口号
-  //   open: true, // 是否自动打开浏览器
-  // },
-  mode: "production",
-  devtool: "source-map",
-};
+  ]
+}
+
 ```
 
 ## Image Minimizer
@@ -245,232 +120,98 @@ module.exports = {
 
 1. 下载包
 
-```
-npm i image-minimizer-webpack-plugin imagemin -D
-```
-
-还有剩下包需要下载，有两种模式：
-
-- 无损压缩
-
-```
-npm install imagemin-gifsicle imagemin-jpegtran imagemin-optipng imagemin-svgo -D
+```bash
+npm install image-minimizer-webpack-plugin sharp svgo --save-dev
 ```
 
-- 有损压缩
+`sharp`：目前 Webpack 官方推荐的高性能图片压缩底层引擎，它速度不仅极快，而且安装友好，支持最新的 WebP 和 AVIF 格式。
 
-```
-npm install imagemin-gifsicle imagemin-mozjpeg imagemin-pngquant imagemin-svgo -D
-```
-
-> [有损/无损压缩的区别](https://baike.baidu.com/item/%E6%97%A0%E6%8D%9F%E3%80%81%E6%9C%89%E6%8D%9F%E5%8E%8B%E7%BC%A9)
+`svgo`：svg压缩，纯 JS 写的，很好用。
 
 2. 配置
 
 我们以无损压缩配置为例：
 
-```js{8,144-171}
-const os = require("os");
-const path = require("path");
-const ESLintWebpackPlugin = require("eslint-webpack-plugin");
-const HtmlWebpackPlugin = require("html-webpack-plugin");
-const MiniCssExtractPlugin = require("mini-css-extract-plugin");
-const CssMinimizerPlugin = require("css-minimizer-webpack-plugin");
-const TerserPlugin = require("terser-webpack-plugin");
+```js{1,10-77}
 const ImageMinimizerPlugin = require("image-minimizer-webpack-plugin");
 
-// cpu核数
-const threads = os.cpus().length;
-
-// 获取处理样式的Loaders
-const getStyleLoaders = (preProcessor) => {
-  return [
-    MiniCssExtractPlugin.loader,
-    "css-loader",
-    {
-      loader: "postcss-loader",
-      options: {
-        postcssOptions: {
-          plugins: [
-            "postcss-preset-env", // 能解决大多数样式兼容性问题
-          ],
-        },
-      },
-    },
-    preProcessor,
-  ].filter(Boolean);
-};
-
 module.exports = {
-  entry: "./src/main.js",
-  output: {
-    path: path.resolve(__dirname, "../dist"), // 生产模式需要输出
-    filename: "static/js/main.js", // 将 js 文件输出到 static/js 目录中
-    clean: true,
-  },
-  module: {
-    rules: [
-      {
-        oneOf: [
-          {
-            // 用来匹配 .css 结尾的文件
-            test: /\.css$/,
-            // use 数组里面 Loader 执行顺序是从右到左
-            use: getStyleLoaders(),
-          },
-          {
-            test: /\.less$/,
-            use: getStyleLoaders("less-loader"),
-          },
-          {
-            test: /\.s[ac]ss$/,
-            use: getStyleLoaders("sass-loader"),
-          },
-          {
-            test: /\.styl$/,
-            use: getStyleLoaders("stylus-loader"),
-          },
-          {
-            test: /\.(png|jpe?g|gif|svg)$/,
-            type: "asset",
-            parser: {
-              dataUrlCondition: {
-                maxSize: 10 * 1024, // 小于10kb的图片会被base64处理
-              },
-            },
-            generator: {
-              // 将图片文件输出到 static/imgs 目录中
-              // 将图片文件命名 [hash:8][ext][query]
-              // [hash:8]: hash值取8位
-              // [ext]: 使用之前的文件扩展名
-              // [query]: 添加之前的query参数
-              filename: "static/imgs/[hash:8][ext][query]",
-            },
-          },
-          {
-            test: /\.(ttf|woff2?)$/,
-            type: "asset/resource",
-            generator: {
-              filename: "static/media/[hash:8][ext][query]",
-            },
-          },
-          {
-            test: /\.js$/,
-            // exclude: /node_modules/, // 排除node_modules代码不编译
-            include: path.resolve(__dirname, "../src"), // 也可以用包含
-            use: [
-              {
-                loader: "thread-loader", // 开启多进程
-                options: {
-                  workers: threads, // 数量
-                },
-              },
-              {
-                loader: "babel-loader",
-                options: {
-                  cacheDirectory: true, // 开启babel编译缓存
-                  cacheCompression: false, // 缓存文件不要压缩
-                  plugins: ["@babel/plugin-transform-runtime"], // 减少代码体积
-                },
-              },
-            ],
-          },
-        ],
-      },
-    ],
-  },
-  plugins: [
-    new ESLintWebpackPlugin({
-      // 指定检查文件的根目录
-      context: path.resolve(__dirname, "../src"),
-      exclude: "node_modules", // 默认值
-      cache: true, // 开启缓存
-      // 缓存目录
-      cacheLocation: path.resolve(
-        __dirname,
-        "../node_modules/.cache/.eslintcache"
-      ),
-      threads, // 开启多进程
-    }),
-    new HtmlWebpackPlugin({
-      // 以 public/index.html 为模板创建文件
-      // 新的html文件有两个特点：1. 内容和源文件一致 2. 自动引入打包生成的js等资源
-      template: path.resolve(__dirname, "../public/index.html"),
-    }),
-    // 提取css成单独文件
-    new MiniCssExtractPlugin({
-      // 定义输出文件名和目录
-      filename: "static/css/main.css",
-    }),
-    // css压缩
-    // new CssMinimizerPlugin(),
-  ],
+  // ... 其他配置
   optimization: {
     minimizer: [
-      // css压缩也可以写到optimization.minimizer里面，效果一样的
-      new CssMinimizerPlugin(),
-      // 当生产模式会默认开启TerserPlugin，但是我们需要进行其他配置，就要重新写了
-      new TerserPlugin({
-        parallel: threads, // 开启多进程
-      }),
-      // 压缩图片
+      // 其他的 css / js 压缩器...
+
+      // 最新的图片压缩配置
       new ImageMinimizerPlugin({
         minimizer: {
-          implementation: ImageMinimizerPlugin.imageminGenerate,
+          // 这里强制指定使用 sharp 引擎
+          implementation: ImageMinimizerPlugin.sharpMinify,
           options: {
-            plugins: [
-              ["gifsicle", { interlaced: true }],
-              ["jpegtran", { progressive: true }],
-              ["optipng", { optimizationLevel: 5 }],
-              [
-                "svgo",
-                {
-                  plugins: [
-                    "preset-default",
-                    "prefixIds",
-                    {
-                      name: "sortAttrs",
-                      params: {
-                        xmlnsOrder: "alphabetical",
-                      },
-                    },
-                  ],
-                },
-              ],
-            ],
+            encodeOptions: {
+              // sharp 的压缩参数，你可以按需调整质量
+              jpeg: {
+                // https://sharp.pixelplumbing.com/api-output#jpeg
+                quality: 80,
+              },
+              webp: {
+                // https://sharp.pixelplumbing.com/api-output#webp
+                lossless: true,
+              },
+              avif: {
+                // https://sharp.pixelplumbing.com/api-output#avif
+                lossless: true,
+              },
+              // png 默认使用 zlib 压缩，通过 quality 设置可以开启有损压缩（需要 libvips 支持）
+              png: {
+                // 设置 1-100 的数值。数值越小图片越小，但低于 60 可能会有肉眼可见色彩断层
+                // 官方建议值在 75-80 左右，体积能大幅缩小且肉眼几乎无损
+                quality: 80,
+                // palette 参数：进一步将图片转为基于调色板的索引色格式，
+                // 也能大幅度降低某些卡通或 UI 图标类型的 PNG 体积
+                palette: true,
+              },
+              // gif不支持无损压缩
+              // https://sharp.pixelplumbing.com/api-output#gif
+              gif: {},
+            },
           },
         },
       }),
+      // 注意：sharp 目前不处理 SVG，如果你项目中有很多 SVG 并且需要压缩
+      // 你需要再 new 一个专门处理 svg 的实例
+      new ImageMinimizerPlugin({
+            minimizer: {
+                implementation: ImageMinimizerPlugin.svgoMinify,
+                options: {
+                    encodeOptions: {
+                        // svgo 的配置项
+                        multipass: true,
+                        plugins: [
+                            "preset-default",
+                            // 确保不要移除 SVG 中的 viewBox 属性，否则会导致各种自适应问题
+                            // svgo 新版本中已将其移出 preset-default，可直接在这里配置
+                            {
+                                name: "removeViewBox",
+                                active: false,
+                            },
+                            {
+                                name: "addAttributesToSVGElement",
+                                params: {
+                                    attributes: [
+                                        // 强制让每一个 SVG 标签都加上合规的身份证 xmlns，彻底解决浏览器兼容兼容性渲染破图的玄学 Bug
+                                        {
+                                            xmlns: "http://www.w3.org/2000/svg",
+                                        },
+                                    ],
+                                },
+                            },
+                        ],
+                    },
+                },
+            },
+        }),
     ],
   },
-  // devServer: {
-  //   host: "localhost", // 启动服务器域名
-  //   port: "3000", // 启动服务器端口号
-  //   open: true, // 是否自动打开浏览器
-  // },
-  mode: "production",
-  devtool: "source-map",
 };
-```
-
-3. 打包时会出现报错：
 
 ```
-Error: Error with 'src\images\1.jpeg': '"C:\Users\86176\Desktop\webpack\webpack_code\node_modules\jpegtran-bin\vendor\jpegtran.exe"'
-Error with 'src\images\3.gif': spawn C:\Users\86176\Desktop\webpack\webpack_code\node_modules\optipng-bin\vendor\optipng.exe ENOENT
-```
-
-我们需要安装两个文件到 node_modules 中才能解决, 文件可以从课件中找到：
-
-- jpegtran.exe
-
-需要复制到 `node_modules\jpegtran-bin\vendor` 下面
-
-> [jpegtran 官网地址](http://jpegclub.org/jpegtran/)
-
-- optipng.exe
-
-需要复制到 `node_modules\optipng-bin\vendor` 下面
-
-> [OptiPNG 官网地址](http://optipng.sourceforge.net/)
-
